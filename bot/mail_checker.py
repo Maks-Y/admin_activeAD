@@ -5,7 +5,7 @@ from ai.nlp import parse_hr_mail
 from .database import TZ
 
 try:  # pragma: no cover - optional dependency
-    from .ad_client import search_candidates
+    from ad.ad_client import search_candidates
 except Exception:  # pragma: no cover - allow import without AD package
     async def search_candidates(_query):  # type: ignore
         return []

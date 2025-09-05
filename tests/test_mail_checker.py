@@ -66,6 +66,11 @@ def test_mail_checker_marks_seen(monkeypatch, caplog):
         mc, "schedule_disable_job", lambda *args, **kwargs: scheduled.append(args)
     )
 
+    async def fake_search(_query):
+        return [types.SimpleNamespace(SamAccountName="user1")]
+
+    monkeypatch.setattr(mc, "search_candidates", fake_search)
+
     async def fake_sleep(_):
         raise asyncio.CancelledError
 
@@ -78,4 +83,5 @@ def test_mail_checker_marks_seen(monkeypatch, caplog):
     assert "\\Seen" in fake.messages[b"1"]["flags"]
     assert fake.messages[b"2"]["flags"] == {"\\Seen"}
     assert len(scheduled) == 1
+    assert scheduled[0][0] == "user1"
     assert any("id1" in msg for msg in caplog.messages)

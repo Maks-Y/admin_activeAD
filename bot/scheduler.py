@@ -3,8 +3,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from ad.ad_client import disable_user
-from db.database import DB, TZ
+from .ad_client import disable_user
+from .database import DB, TZ
 
 scheduler = AsyncIOScheduler(timezone=TZ)
 

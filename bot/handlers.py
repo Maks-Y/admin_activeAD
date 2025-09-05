@@ -10,7 +10,7 @@ from telegram.ext import (
 # that the module can be imported in a minimal environment during unit tests
 # where these packages may be absent.
 try:  # pragma: no cover - used only when full project layout is present
-    from db.database import (
+    from .database import (
         is_admin,
         SUPERADMIN_ID,
         add_admin,
@@ -34,7 +34,7 @@ except Exception:  # pragma: no cover - tests focus only on basic handlers
         return []
 
 try:  # pragma: no cover
-    from ad.ad_client import search_candidates, reset_password, disable_user
+    from .ad_client import search_candidates, reset_password, disable_user
 except Exception:  # pragma: no cover
     async def search_candidates(_query):  # type: ignore
         return []

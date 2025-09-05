@@ -1,4 +1,6 @@
 from telegram.ext import ApplicationBuilder
+from telegram import MenuButtonCommands
+# TODO: replace with MenuButtonWebApp when a web panel is available
 from handlers import setup_handlers
 from scheduler import scheduler, restore_jobs_on_startup
 from mail_checker import start_mail_checker
@@ -10,6 +12,7 @@ async def on_startup(app):
     scheduler.start()
     await restore_jobs_on_startup()
     app.create_task(start_mail_checker())
+    await app.bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 
 def main():
     token = os.getenv("TELEGRAM_TOKEN")

@@ -1,4 +1,9 @@
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import (
+    Update,
+    ReplyKeyboardMarkup,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
 from telegram.ext import (
     CommandHandler,
     MessageHandler,
@@ -34,13 +39,16 @@ except Exception:  # pragma: no cover - tests focus only on basic handlers
         return []
 
 try:  # pragma: no cover
-    from ad.ad_client import search_candidates, reset_password
+    from ad.ad_client import search_candidates, reset_password, disable_user
 except Exception:  # pragma: no cover
     async def search_candidates(_query):  # type: ignore
         return []
 
     async def reset_password(_sam, length: int = 12):  # type: ignore
         return ""
+
+    async def disable_user(_sam):  # type: ignore
+        return None
 
 from ai.nlp import parse_command
 
@@ -99,18 +107,80 @@ async def whoami_cmd(update: Update, context):
 
 
 async def super_cmd(update: Update, context):
-    if update.message:
-        await update.message.reply_text("Admin menu is not implemented.")
+    if not (update.message and update.effective_user):
+        return
+    uid = update.effective_user.id
+    if not is_admin(uid):
+        await update.message.reply_text("Access denied")
+        return
+    buttons = [
+        [
+            InlineKeyboardButton("Добавить админа", callback_data="super:add"),
+            InlineKeyboardButton("Удалить админа", callback_data="super:remove"),
+        ],
+        [InlineKeyboardButton("Список админов", callback_data="super:list")],
+    ]
+    await update.message.reply_text(
+        "Админские действия:", reply_markup=InlineKeyboardMarkup(buttons)
+    )
 
 
 async def super_cb(update: Update, context):
-    if update.callback_query:
-        await update.callback_query.answer("Not implemented")
+    query = update.callback_query
+    user = update.effective_user
+    if not (query and user):
+        return
+
+    data = query.data or ""
+    parts = data.split(":")
+    action = parts[1] if len(parts) > 1 else ""
+
+    if action in {"add", "remove"}:
+        if user.id != SUPERADMIN_ID:
+            await query.answer("Access denied", show_alert=True)
+            return
+        if len(parts) < 3:
+            await query.answer("No user id", show_alert=True)
+            return
+        target = int(parts[2])
+        if action == "add":
+            res = add_admin(target, actor=user.id)
+            msg = "Added" if res else "Already"
+        else:
+            res = remove_admin(target, actor=user.id)
+            msg = "Removed" if res else "Missing"
+        await query.answer(msg, show_alert=True)
+    elif action == "list":
+        if not is_admin(user.id):
+            await query.answer("Access denied", show_alert=True)
+            return
+        admins = list_admins(actor=user.id)
+        text = ", ".join(str(a) for a in admins) or "No admins"
+        await query.answer(text, show_alert=True)
+    else:
+        await query.answer("Unknown action", show_alert=True)
 
 
 async def ad_callback(update: Update, context):
-    if update.callback_query:
-        await update.callback_query.answer("Not implemented")
+    query = update.callback_query
+    user = update.effective_user
+    if not (query and user):
+        return
+    if not is_admin(user.id):
+        await query.answer("Access denied", show_alert=True)
+        return
+
+    data = query.data or ""
+    action, *args = data.split(":")
+    target = args[0] if args else ""
+    if action == "reset":
+        pwd = await reset_password(target)
+        await query.answer(f"{target}: {pwd}", show_alert=True)
+    elif action == "disable":
+        await disable_user(target)
+        await query.answer(f"{target} disabled", show_alert=True)
+    else:
+        await query.answer("Unknown", show_alert=True)
 
 
 async def free_text(update: Update, context):

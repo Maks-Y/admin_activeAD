@@ -1,4 +1,4 @@
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     CommandHandler,
     MessageHandler,
@@ -34,13 +34,16 @@ except Exception:  # pragma: no cover - tests focus only on basic handlers
         return []
 
 try:  # pragma: no cover
-    from ad.ad_client import search_candidates, reset_password
+    from ad.ad_client import search_candidates, reset_password, disable_user
 except Exception:  # pragma: no cover
     async def search_candidates(_query):  # type: ignore
         return []
 
     async def reset_password(_sam, length: int = 12):  # type: ignore
         return ""
+
+    async def disable_user(_sam):  # type: ignore
+        return None
 
 from ai.nlp import parse_command
 
@@ -99,18 +102,74 @@ async def whoami_cmd(update: Update, context):
 
 
 async def super_cmd(update: Update, context):
-    if update.message:
-        await update.message.reply_text("Admin menu is not implemented.")
+    """Display superadmin menu with inline buttons."""
+
+    if not update.message or not update.effective_user:
+        return
+
+    if update.effective_user.id != SUPERADMIN_ID:
+        await update.message.reply_text("Access denied")
+        return
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("Добавить администратора", callback_data="super:add")],
+            [InlineKeyboardButton("Удалить администратора", callback_data="super:remove")],
+            [InlineKeyboardButton("Список администраторов", callback_data="super:list")],
+        ]
+    )
+
+    await update.message.reply_text("Администрирование:", reply_markup=keyboard)
 
 
 async def super_cb(update: Update, context):
-    if update.callback_query:
-        await update.callback_query.answer("Not implemented")
+    query = update.callback_query
+    user = update.effective_user
+    if not query or not user:
+        return
+
+    if user.id != SUPERADMIN_ID:
+        await query.answer("Access denied", show_alert=True)
+        return
+
+    await query.answer()
+    data = (query.data or "").split(":")
+    action = data[1] if len(data) > 1 else ""
+    response = ""
+    if action == "list":
+        admins = list_admins(actor=user.id)
+        response = ", ".join(map(str, admins)) if admins else "No admins"
+    elif action in {"add", "remove"} and len(data) > 2:
+        try:
+            target = int(data[2])
+        except ValueError:
+            response = "Invalid user id"
+        else:
+            if action == "add":
+                ok = add_admin(target, actor=user.id)
+                response = "Admin added" if ok else "Already an admin"
+            else:
+                ok = remove_admin(target, actor=user.id)
+                response = "Admin removed" if ok else "Not an admin"
+    else:
+        response = "Specify user id"
+
+    await query.message.reply_text(response)
 
 
 async def ad_callback(update: Update, context):
-    if update.callback_query:
-        await update.callback_query.answer("Not implemented")
+    query = update.callback_query
+    if not query:
+        return
+
+    await query.answer()
+    action, sam = (query.data or "").split(":", 1)
+    if action == "reset":
+        pwd = await reset_password(sam)
+        await query.message.reply_text(f"New password for {sam}: {pwd}")
+    elif action == "disable":
+        await disable_user(sam)
+        await query.message.reply_text(f"User {sam} disabled")
 
 
 async def free_text(update: Update, context):
@@ -122,21 +181,29 @@ async def free_text(update: Update, context):
     text = update.message.text or ""
     cmd, args = parse_command(text)
 
-    if cmd == "reset":
+    if cmd in {"reset", "disable"}:
         if not args:
-            await update.message.reply_text("Usage: reset <samAccountName>")
+            await update.message.reply_text(f"Usage: {cmd} <query>")
             return
-        pwd = await reset_password(args[0])
-        await update.message.reply_text(f"New password for {args[0]}: {pwd}")
-    elif cmd == "disable":
-        await update.message.reply_text("Scheduling is not implemented yet.")
+        query = " ".join(args)
+        candidates = await search_candidates(query)
+        if not candidates:
+            await update.message.reply_text("No users found")
+            return
+        keyboard = [
+            [InlineKeyboardButton(c.DisplayName, callback_data=f"{cmd}:{c.SamAccountName}")]
+            for c in candidates
+        ]
+        await update.message.reply_text(
+            "Select user:", reply_markup=InlineKeyboardMarkup(keyboard)
+        )
     elif cmd == "jobs":
         await update.message.reply_text("No scheduled jobs.")
     elif cmd == "admin":
-        await update.message.reply_text("Admin menu is not implemented.")
+        await super_cmd(update, context)
     else:
         await update.message.reply_text(
-            "Unrecognised input. Use /menu to show available actions."
+            "Unrecognised input. Use /menu to show available actions.",
         )
 
 

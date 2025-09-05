@@ -1,10 +1,10 @@
 from telegram.ext import ApplicationBuilder
 from telegram import MenuButtonCommands
 # TODO: replace with MenuButtonWebApp when a web panel is available
-from handlers import setup_handlers
-from scheduler import scheduler, restore_jobs_on_startup
-from mail_checker import start_mail_checker
-from db.database import init_db, SUPERADMIN_ID
+from .handlers import setup_handlers
+from .scheduler import scheduler, restore_jobs_on_startup
+from .mail_checker import start_mail_checker
+from .database import init_db, SUPERADMIN_ID
 from telegram import (
     BotCommand,
     BotCommandScopeChat,

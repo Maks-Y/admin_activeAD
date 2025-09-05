@@ -13,6 +13,22 @@ def db():
     return database
 
 
+def test_requires_init():
+    os.environ["DB_PATH"] = ":memory:"
+    import bot.database as database
+    importlib.reload(database)
+    funcs = [
+        lambda: database.is_admin(1),
+        lambda: database.add_admin(1),
+        lambda: database.remove_admin(1),
+        lambda: database.list_admins(),
+        lambda: database.audit(None, "x"),
+    ]
+    for fn in funcs:
+        with pytest.raises(RuntimeError, match="Database is not initialized"):
+            fn()
+
+
 def test_add_and_remove_admin(db):
     assert db.list_admins(actor=1) == []
     assert db.add_admin(42, actor=1) is True

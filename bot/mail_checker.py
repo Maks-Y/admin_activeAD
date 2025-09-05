@@ -4,6 +4,12 @@ from scheduler import schedule_disable_job
 from ai.nlp import parse_hr_mail
 from db.database import TZ
 
+try:  # pragma: no cover - optional dependency
+    from ad.ad_client import search_candidates
+except Exception:  # pragma: no cover - allow import without AD package
+    async def search_candidates(_query):  # type: ignore
+        return []
+
 async def start_mail_checker():
     host, user, pwd = os.getenv("IMAP_HOST"), os.getenv("IMAP_USER"), os.getenv("IMAP_PASS")
     if not all([host, user, pwd]):
@@ -22,8 +28,14 @@ async def start_mail_checker():
                     logging.info("Processing mail %s", msg_id)
                     fio, date = parse_hr_mail(msg)
                     if fio and date:
+                        candidates = await search_candidates(fio)
+                        if len(candidates) != 1:
+                            logging.info("Ambiguous FIO '%s'", fio)
+                            M.store(num, "+FLAGS", "\\Seen")
+                            continue
+                        sam = candidates[0].SamAccountName
                         run_dt = date.replace(hour=16, minute=0, second=0, tzinfo=TZ)
-                        schedule_disable_job(fio, run_dt, created_by=0, meta={"source": "mail"})
+                        schedule_disable_job(sam, run_dt, created_by=0, meta={"source": "mail"})
                         M.store(num, "+FLAGS", "\\Seen")
                         logging.info("Processed mail %s", msg_id)
         except Exception:

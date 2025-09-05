@@ -7,7 +7,6 @@ from mail_checker import start_mail_checker
 from db.database import init_db, SUPERADMIN_ID
 from telegram import (
     BotCommand,
-    BotCommandScopeAllPrivateChats,
     BotCommandScopeChat,
 )
 import os, logging, asyncio
@@ -40,11 +39,6 @@ def main():
         ]
         await application.bot.set_my_commands(
             super_cmds, scope=BotCommandScopeChat(SUPERADMIN_ID)
-        )
-
-        reduced_cmds = [BotCommand("start", "Start"), BotCommand("help", "Help")]
-        await application.bot.set_my_commands(
-            reduced_cmds, scope=BotCommandScopeAllPrivateChats()
         )
 
     asyncio.run(_set_commands())

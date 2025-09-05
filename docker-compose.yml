@@ -1,0 +1,11 @@
+version: '3.9'
+
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./logs:/app/logs
+      - ./bot.db:/app/bot.db

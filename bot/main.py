@@ -1,7 +1,7 @@
 from telegram.ext import ApplicationBuilder
 from telegram import MenuButtonCommands
 # TODO: replace with MenuButtonWebApp when a web panel is available
-from .handlers import setup_handlers
+from bot.handlers import setup_handlers
 from .scheduler import scheduler, restore_jobs_on_startup
 from .mail_checker import start_mail_checker
 from .database import init_db, SUPERADMIN_ID

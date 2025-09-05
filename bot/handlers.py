@@ -34,7 +34,7 @@ except Exception:  # pragma: no cover - tests focus only on basic handlers
         return []
 
 try:  # pragma: no cover
-    from .ad_client import search_candidates, reset_password, disable_user
+    from ad.ad_client import search_candidates, reset_password, disable_user
 except Exception:  # pragma: no cover
     async def search_candidates(_query):  # type: ignore
         return []

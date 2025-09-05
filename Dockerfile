@@ -6,6 +6,6 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY bot ./bot
-COPY ai ./ai
+COPY ai/nlp.py ai/__init__.py ./ai/
 
 CMD ["python", "-m", "bot.main"]

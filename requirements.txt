@@ -1,0 +1,5 @@
+python-telegram-bot
+APScheduler
+dateparser
+pymorphy2
+pymorphy2-dicts-ru==2.4.417127.4579844
